@@ -1,0 +1,101 @@
+Vi gcd.x
+struct num
+{
+long a;
+long b;
+};
+program gcd_prog{
+ version gcd_vers{
+long gcd_fn(num)=1;
+}=1;
+}=0x30000001;
+[khaja@mars distsyslab]$ rpcgen gcd.x
+[khaja@mars distsyslab]$ ls
+client          Echos.h         Echos.x     gcd_svc.c  Makefile.Echos
+Echos_client.c  Echos_server.c  gcd_clnt.c  gcd.x      server
+Echos_clnt.c    Echos_svc.c     gcd.h       gcd_xdr.c
+
+GCD CLIENT CODE
+Vi gcd_client.c
+#include "gcd.h"
+void
+gcd_prog_1(char *host,num number)
+{
+        CLIENT *clnt;
+        long  *result_1;
+        num  gcd_fn_1_arg;
+
+        gcd_fn_1_arg.a=number.a;
+        gcd_fn_1_arg.b=number.b;
+#ifndef DEBUG
+        clnt = clnt_create (host, gcd_prog, gcd_vers, "udp");
+        if (clnt == NULL) {
+                clnt_pcreateerror (host);
+                exit (1);
+        }
+
+#endif  /* DEBUG */
+
+        result_1 = gcd_fn_1(&gcd_fn_1_arg, clnt);
+        if (result_1 == (long *) NULL) {
+                clnt_perror (clnt, "call failed");
+        }
+
+printf("gcd is %d",*result_1);
+#ifndef DEBUG
+        clnt_destroy (clnt);
+#endif   /* DEBUG */
+}
+
+
+int
+main (int argc, char *argv[])
+{
+        char *host;
+
+num n;
+        if (argc < 2) {
+                printf ("usage: %s server_host\n", argv[0]);
+                exit (1);
+
+        }
+        host = argv[1];
+n.a=atol(argv[2]);
+        n.b=atol(argv[3]);
+
+        gcd_prog_1 (host,n);
+exit (0);
+}
+
+
+Server code
+Vi gcd_server.c
+int gcd(int a ,int b){
+        if (b==0)
+        return a;
+        return gcd(b,a%b);}
+
+#include "gcd.h"
+
+long *
+gcd_fn_1_svc(num *argp, struct svc_req *rqstp)
+{
+        static long  result;
+
+        /*
+         * insert server code here
+         */
+
+result=gcd((*argp).a,(*argp).b);
+
+        return &result;
+}
+
+Execution :-
+
+$cc -o gcd_server gcd_server.c gcd_svc.c gcd_xdr.c –lnsl
+$cc -o gcd_client gcd_client.c gcd_clnt.c gcd_xdr.c –lnsl
+$./gcd_server &
+[4] 5086
+$ ./gcd_client 10.2.0.5 10 12
+gcd is 2[khaja@mars gcd]$
